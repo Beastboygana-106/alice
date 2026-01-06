@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Online Voting System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{--primary:#1e3c72;--accent:#2a5298}
+body{margin:0;font-family:'Segoe UI',Arial;background:#eef2f7;color:#333}
+header{background:linear-gradient(90deg,var(--primary),var(--accent));color:#fff;padding:20px;text-align:center;position:sticky;top:0;z-index:10;}
+header h1{margin:0;font-size:24px}
+nav{display:flex;justify-content:center;gap:15px;margin-top:10px;flex-wrap:wrap;}
+nav button{padding:10px 22px;border-radius:25px;background:#fff;color:var(--primary);border:none;font-weight:bold;cursor:pointer;transition:all .2s}
+nav button:hover{opacity:.9;transform:scale(1.05);}
+.container{padding:40px;display:flex;gap:30px;flex-wrap:wrap;justify-content:center}
+.card{background:#fff;border-radius:18px;box-shadow:0 15px 35px rgba(0,0,0,.15);padding:28px;width:340px}
+.hidden{display:none}
+h2,h3{text-align:center;margin-top:0}
+
+input,button{
+  width:100%;padding:12px;margin-top:12px;border-radius:10px;
+  border:1px solid #ccc;background:#fff;color:#000;transition:all .2s;
+}
+
+button.submit, button.add, button.reset{
+  background:linear-gradient(90deg,var(--primary),var(--accent));
+  color:#fff;border:none;font-weight:bold;cursor:pointer;
+}
+
+button.submit:hover, button.add:hover, button.reset:hover{opacity:.9}
+button.submit:active, button.add:active, button.reset:active{transform:scale(.98)}
+input:focus{outline:none;border:2px solid var(--accent)}
+
+.candidate{display:flex;align-items:center;gap:15px;border:1px solid #ddd;
+  border-radius:14px;padding:14px;margin-bottom:14px;background:#fff}
+.candidate img{width:75px;height:75px;border-radius:50%;object-fit:cover;
+  border:2px solid var(--accent)}
+.candidate-line{flex:1;font-weight:600;white-space:nowrap}
+
+.nota{background:#f5f6fa;border:2px dashed #aaa}
+
+.dashboard{width:100%;max-width:1050px}
+.list{background:#fafafa;border-radius:12px;padding:12px;margin-top:10px}
+footer{text-align:center;padding:18px;background:#e6ebf2;margin-top:30px;font-size:14px}
+
+@media (max-width:600px){
+  .card{width:100%}
+}
+</style>
+</head>
+
+<body>
+<header>
+<h1>Online Voting System</h1>
+<nav>
+<button onclick="showHome()">Home</button>
+<button onclick="showResults()">Results</button>
+<button onclick="showLogin()">Login</button>
+</nav>
+</header>
+
+<!-- HOME -->
+<div class="container" id="homePage">
+  <div class="card" style="width:600px;text-align:center;">
+    <h2>Welcome to the Online Voting System</h2>
+    <p>Participate in elections securely, transparently, and safely.</p>
+    <p>✔ Secure OTP based voting</p>
+    <p>✔ One voter – one vote</p>
+    <p>✔ Admin controlled candidates</p>
+    <img src="images/vote_demo.jpg" style="width:100%;max-width:400px;margin-top:15px;border-radius:15px" onerror="this.src='images/default.jpg'">
+  </div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div class="container hidden" id="loginPage">
+  <div class="card">
+    <h3>Voter Login</h3>
+    <input id="voterId" placeholder="Voter ID">
+    <input id="voterPass" type="password" placeholder="Password">
+    <button class="submit" onclick="voterLogin()">Login</button>
+  </div>
+
+  <div class="card">
+    <h3>Admin Login</h3>
+    <input id="adminUser" placeholder="Admin Username">
+    <input id="adminPass" type="password" placeholder="Password">
+    <button class="submit" onclick="adminLogin()">Login</button>
+  </div>
+</div>
+
+<!-- VOTER OTP -->
+<div class="container hidden" id="voterOtpPage">
+  <div class="card">
+    <h3>Voter OTP Verification</h3>
+    <p>Demo OTP: <b>111111</b></p>
+    <input id="voterOtp" placeholder="Enter OTP">
+    <button class="submit" onclick="verifyVoterOTP()">Verify & Vote</button>
+  </div>
+</div>
+
+<!-- VOTING -->
+<div class="container hidden" id="votePage">
+  <div class="card" style="width:480px">
+    <h2>Select Your Candidate</h2>
+    <div id="candidateList"></div>
+    <button class="submit" onclick="submitVote()">Submit Vote</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="container hidden" id="resultsPage">
+  <div class="dashboard">
+    <div class="card">
+      <h3>Results List</h3>
+      <div id="resultList" class="list"></div>
+    </div>
+
+    <div class="card">
+      <h3>Pie Chart</h3>
+      <canvas id="pieChart"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>Bar Graph</h3>
+      <canvas id="barChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN OTP -->
+<div class="container hidden" id="otpPage">
+  <div class="card">
+    <h3>Admin OTP Verification</h3>
+    <p>Demo OTP: <b>123456</b></p>
+    <input id="otpInput" placeholder="Enter OTP">
+    <button class="submit" onclick="verifyOTP()">Verify OTP</button>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div class="container hidden" id="adminDashboard">
+  <div class="dashboard">
+    <div class="card">
+      <h3>Candidate Management</h3>
+      <div id="adminCandidates" class="list"></div>
+      <input id="newCandidate" placeholder="Candidate Name">
+      <input id="newParty" placeholder="Party Name">
+      <input id="newSymbol" placeholder="Party Symbol">
+      <input id="newImage" placeholder="Image path (images/name.jpg)">
+      <button class="add" onclick="addCandidate()">Add Candidate</button>
+      <button class="reset" onclick="resetVotes()" style="margin-top:10px;background:#e74c3c;">Reset Votes</button>
+    </div>
+  </div>
+</div>
+
+<footer>© 2025 Online Voting System | Demo Project</footer>
+
+<script>
+const homePage = document.getElementById('homePage');
+const loginPage = document.getElementById('loginPage');
+const voterOtpPage = document.getElementById('voterOtpPage');
+const votePage = document.getElementById('votePage');
+const resultsPage = document.getElementById('resultsPage');
+const otpPage = document.getElementById('otpPage');
+const adminDashboard = document.getElementById('adminDashboard');
+const candidateList = document.getElementById('candidateList');
+const adminCandidates = document.getElementById('adminCandidates');
+const resultList = document.getElementById('resultList');
+
+let currentVoter = '';
+let pieChartRef = null;
+let barChartRef = null;
+
+let candidates = JSON.parse(localStorage.getItem('candidates')) || [
+ {name:'Candidate A',party:'Alpha Party',symbol:'🌸',image:'images/candidateA.jpg'},
+ {name:'Candidate B',party:'Beta Party',symbol:'🐘',image:'images/candidateB.jpg'},
+ {name:'Candidate C',party:'Gamma Party',symbol:'🖐️',image:'images/candidateC.jpg'},
+ {name:'NOTA',party:'None',symbol:'❌',image:'images/nota.jpg'}
+];
+
+function hideAll(){
+  homePage.classList.add('hidden');
+  loginPage.classList.add('hidden');
+  voterOtpPage.classList.add('hidden');
+  votePage.classList.add('hidden');
+  resultsPage.classList.add('hidden');
+  otpPage.classList.add('hidden');
+  adminDashboard.classList.add('hidden');
+}
+
+function showHome(){ hideAll(); homePage.classList.remove('hidden'); }
+function showLogin(){ hideAll(); loginPage.classList.remove('hidden'); }
+
+function voterLogin(){
+  if(!voterId.value || !voterPass.value) return alert("Enter voter ID & password");
+  if(localStorage.getItem('voted_'+voterId.value)) return alert("You already voted");
+  currentVoter = voterId.value;
+  hideAll();
+  voterOtpPage.classList.remove('hidden');
+}
+
+function verifyVoterOTP(){
+  if(voterOtp.value === '111111'){ hideAll(); votePage.classList.remove('hidden'); }
+  else alert("Invalid OTP");
+}
+
+function submitVote(){
+  const sel = document.querySelector('input[name="vote"]:checked');
+  if(!sel) return alert("Select a candidate");
+
+  if(!confirm("Are you sure? You cannot change your vote.")) return;
+
+  let c = localStorage.getItem(sel.value) || 0;
+  localStorage.setItem(sel.value, Number(c)+1);
+  localStorage.setItem('voted_'+currentVoter,true);
+
+  alert("Vote submitted successfully!");
+  showHome();
+}
+
+function showResults(){
+  hideAll();
+  resultsPage.classList.remove('hidden');
+  loadResults();
+}
+
+function adminLogin(){
+  if(adminUser.value==='admin' && adminPass.value==='admin123'){
+    hideAll();
+    otpPage.classList.remove('hidden');
+  } else alert("Invalid admin credentials");
+}
+
+function verifyOTP(){
+  if(otpInput.value==='123456'){
+    hideAll();
+    adminDashboard.classList.remove('hidden');
+    renderAdminCandidates();
+  } else alert("Invalid OTP");
+}
+
+function renderCandidates(){
+  candidateList.innerHTML = '';
+  candidates.forEach(c=>{
+    candidateList.innerHTML += `
+    <div class="candidate ${c.name==='NOTA'?'nota':''}">
+      <img src="${c.image}" onerror="this.src='images/default.jpg'">
+      <div class="candidate-line">${c.name} | ${c.party} | ${c.symbol}</div>
+      <input type="radio" name="vote" value="${c.name}">
+    </div>`;
+  });
+}
+renderCandidates();
+
+function renderAdminCandidates(){
+  adminCandidates.innerHTML='';
+  candidates.forEach((c,i)=>{
+    adminCandidates.innerHTML += `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span>${c.name} (${c.party})</span>
+      ${c.name!=='NOTA'
+        ? `<button onclick="removeCandidate(${i})" style="width:auto;padding:5px 12px;background:#e74c3c">Remove</button>`
+        : '' }
+    </div>`;
+  });
+}
+
+function addCandidate(){
+  if(!newCandidate.value||!newParty.value||!newSymbol.value||!newImage.value)
+    return alert("Fill all fields");
+
+  candidates.splice(candidates.length-1,0,{
+    name:newCandidate.value,
+    party:newParty.value,
+    symbol:newSymbol.value,
+    image:newImage.value
+  });
+
+  localStorage.setItem('candidates',JSON.stringify(candidates));
+  newCandidate.value=newParty.value=newSymbol.value=newImage.value='';
+  renderCandidates();
+  renderAdminCandidates();
+}
+
+function removeCandidate(index){
+  candidates.splice(index,1);
+  localStorage.setItem('candidates',JSON.stringify(candidates));
+  renderCandidates(); renderAdminCandidates();
+}
+
+function loadResults(){
+  let labels=[],data=[],colors=[];
+  const defaultColors=['#1e3c72','#2a5298','#f39c12','#27ae60','#c0392b','#8e44ad','#e67e22'];
+  resultList.innerHTML='';
+
+  candidates.forEach((c,i)=>{
+    let v = Number(localStorage.getItem(c.name) || 0);
+    labels.push(c.name);
+    data.push(v);
+    colors.push(defaultColors[i%defaultColors.length]);
+    resultList.innerHTML += `${c.name}: ${v} votes<br>`;
+  });
+
+  if(pieChartRef) pieChartRef.destroy();
+  if(barChartRef) barChartRef.destroy();
+
+  pieChartRef = new Chart(pieChart,{
+    type:'pie',
+    data:{labels,datasets:[{data, backgroundColor:colors}]}
+  });
+
+  barChartRef = new Chart(barChart,{
+    type:'bar',
+    data:{labels,datasets:[{data, backgroundColor:colors}]}
+  });
+}
+
+// Reset Votes Function
+function resetVotes() {
+  if(!confirm("Reset all votes and voter history?")) return;
+  candidates.forEach(c => localStorage.removeItem(c.name));
+  Object.keys(localStorage).forEach(key=>{
+    if(key.startsWith('voted_')) localStorage.removeItem(key);
+  });
+  alert("All votes reset!");
+  loadResults();
+  showHome();
+}
+</script>
+</body>
+</html>
